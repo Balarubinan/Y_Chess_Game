@@ -1,4 +1,6 @@
-# Chess Game with Pyhton
+# Chess Game with Python
+
+** Project is currently under development **
 
 # Project Motive:
 
