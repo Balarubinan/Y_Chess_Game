@@ -11,16 +11,19 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSize
 from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtWidgets import QPushButton
 
 from src.Mod_button import ModButton
-from src.main import validate_move
+from src.main import validate_move,check,check_mate,movable,set_grid
 
 class Ui_Dialog(QtWidgets.QMainWindow):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
         Dialog.resize(1263, 873)
         self.points=[]
+        self.BKStyle,self.WKStyle=None,None
         self.turn=0
+        self.modified=[]
         self.gridLayoutWidget = QtWidgets.QWidget(Dialog)
         self.gridLayoutWidget.setGeometry(QtCore.QRect(100, 60, 800, 800))
         self.gridLayoutWidget.setObjectName("gridLayoutWidget")
@@ -59,7 +62,7 @@ class Ui_Dialog(QtWidgets.QMainWindow):
             for y in range(8):
                 if self.grid[x][y]!='.':
                     self.buttons[(x,y)].setIcon(QIcon(f"C:\\Users\\Balarubinan\\PycharmProjects\\chess_project\\src\\images\\{self.grid[x][y]}.png"))
-                    self.buttons[(x,y)].setIconSize(QSize(100,100))
+                    self.buttons[(x,y)].setIconSize(QSize(70,70))
                 else:
                     self.buttons[(x, y)].setIcon(QIcon())
 
@@ -93,27 +96,76 @@ class Ui_Dialog(QtWidgets.QMainWindow):
     def updated(self,x,y):
         if len(self.points)==0:
             self.points.append((x,y))
+            set_grid(self.grid)
+            self.show_possible_moves(x,y)
         else:
+            self.undo_selected()
             self.points.append((x,y))
             x1,y1=self.points[0][0],self.points[0][1]
             x2, y2 = self.points[1][0], self.points[1][1]
             res=self.check_valid()
-            res=True
+            # res=True
             self.points=[]
+            print("Res valuse is",res)
             if res is True:
                 self.turn=(self.turn+1)%2
                 self.grid[x2][y2]=self.grid[x1][y1]
                 self.grid[x1][y1]='.'
+                self.checker()
                 self.render_board()
             else:
-                pass
+                print("Wrong move!!")
+
 
     def check_valid(self):
         # points =[(1,2),(2,3)]
         x1,y1=self.points[0][0],self.points[0][1]
         x2, y2 = self.points[1][0], self.points[1][1]
         print(x1,y1,x2,y2)
-        validate_move(self.grid,self.turn,x1,y1,x2,y2)
+        res=validate_move(self.grid,self.turn,x1,y1,x2,y2)
+        print("res is ",res)
+        return res
+
+    def checker(self):
+        a=check()
+        self.king_coord=a[0],a[1]
+        wx,wy=a[0]
+        bx,by=a[1]
+        Wc,Bc=a[2],a[3]
+        print("Check Value is ",Wc,Bc)
+        if Wc:
+            self.WKStyle=self.buttons[(wx,wy)].styleSheet()
+            self.buttons[(wx,wy)].setStyleSheet('background-color:red;border:none;')
+        else:
+            if self.WKStyle is not None:
+                self.buttons[(wx,wy)].setStyleSheet(self.WKStyle)
+        if Bc:
+            self.BKStyle = self.buttons[(wx, wy)].styleSheet()
+            self.buttons[(bx, by)].setStyleSheet('background-color:red;border:none;')
+        else:
+            if self.BKStyle is not None:
+                self.buttons[(wx,wy)].setStyleSheet(self.BKStyle)
+        # a=check_mate()
+        # if a[0]:
+        #     if a[1]=='B':
+        #         self.buttons[(bx,by)].setStyleSheet("background-color:orange;border:none;")
+        #     else:
+        #         self.buttons[(wx, wy)].setStyleSheet("background-color:orange;border:none;")
+
+    def show_possible_moves(self, x, y):
+        gr = self.grid
+        for ex in range(8):
+            for ey in range(8):
+                if self.grid[ex][ey] == '.':
+                    if movable(gr[x][y], x, y, ex, ey):
+                        self.modified.append((self.buttons[(ex, ey)], self.buttons[(ex, ey)].styleSheet()))
+                        self.buttons[(ex, ey)].setStyleSheet("background-color:rgb(186, 202, 69);border:none;")
+                    else:
+                        self.buttons[(ex, ey)].setIcon(QIcon())
+
+    def undo_selected(self):
+        for x in self.modified:
+            x[0].setStyleSheet(x[1])
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
